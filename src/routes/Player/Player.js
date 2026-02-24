@@ -58,6 +58,7 @@ const Player = ({ urlParams, queryParams }) => {
 
     const bufferingRef = React.useRef();
     const errorRef = React.useRef();
+    const mobileHideControlsTimeoutRef = React.useRef(null);
 
     const [immersed, setImmersed] = React.useState(true);
     const setImmersedDebounced = React.useCallback(debounce(setImmersed, 3000), []);
@@ -295,15 +296,35 @@ const Player = ({ urlParams, queryParams }) => {
         }
     }, [player.nextVideo, handleNextVideoNavigation, profile.settings]);
 
-    const onVideoClick = React.useCallback(() => {
-        if (video.state.paused !== null) {
-            if (video.state.paused) {
-                onPlayRequestedDebounced();
+    const showMobileControlsTemporarily = React.useCallback(() => {
+        setImmersedDebounced.cancel();
+        clearTimeout(mobileHideControlsTimeoutRef.current);
+        setImmersed(false);
+        mobileHideControlsTimeoutRef.current = setTimeout(() => {
+            setImmersed(true);
+        }, 3000);
+    }, [setImmersedDebounced]);
+
+    const onVideoClick = React.useCallback((event) => {
+        const isTouch = event.nativeEvent.pointerType === 'touch';
+        if (isTouch) {
+            if (immersed) {
+                showMobileControlsTemporarily();
             } else {
-                onPauseRequestedDebounced();
+                clearTimeout(mobileHideControlsTimeoutRef.current);
+                setImmersedDebounced.cancel();
+                setImmersed(true);
+            }
+        } else {
+            if (video.state.paused !== null) {
+                if (video.state.paused) {
+                    onPlayRequestedDebounced();
+                } else {
+                    onPauseRequestedDebounced();
+                }
             }
         }
-    }, [video.state.paused]);
+    }, [video.state.paused, immersed, showMobileControlsTemporarily, setImmersedDebounced]);
 
     const onVideoDoubleClick = React.useCallback(() => {
         onPlayRequestedDebounced.cancel();
@@ -343,6 +364,20 @@ const Player = ({ urlParams, queryParams }) => {
     const onContainerMouseLeave = React.useCallback(() => {
         setImmersedDebounced.cancel();
         setImmersed(true);
+    }, []);
+
+    const onContainerTouchStart = React.useCallback((event) => {
+        if (!event.nativeEvent.controlBarTouchPrevented) {
+            showMobileControlsTemporarily();
+        }
+    }, [showMobileControlsTemporarily]);
+
+    const onControlBarTouchStart = React.useCallback((event) => {
+        event.nativeEvent.controlBarTouchPrevented = true;
+        clearTimeout(mobileHideControlsTimeoutRef.current);
+        mobileHideControlsTimeoutRef.current = setTimeout(() => {
+            setImmersed(true);
+        }, 3000);
     }, []);
 
     const onBarMouseMove = React.useCallback((event) => {
@@ -775,6 +810,7 @@ const Player = ({ urlParams, queryParams }) => {
             setImmersedDebounced.cancel();
             onPlayRequestedDebounced.cancel();
             onPauseRequestedDebounced.cancel();
+            clearTimeout(mobileHideControlsTimeoutRef.current);
         };
     }, []);
 
@@ -783,7 +819,8 @@ const Player = ({ urlParams, queryParams }) => {
             onMouseDown={onContainerMouseDown}
             onMouseMove={onContainerMouseMove}
             onMouseOver={onContainerMouseMove}
-            onMouseLeave={onContainerMouseLeave}>
+            onMouseLeave={onContainerMouseLeave}
+            onTouchStart={onContainerTouchStart}>
             <Video
                 ref={video.containerRef}
                 className={styles['layer']}
@@ -890,6 +927,7 @@ const Player = ({ urlParams, queryParams }) => {
                 onToggleSideDrawer={toggleSideDrawer}
                 onMouseMove={onBarMouseMove}
                 onMouseOver={onBarMouseMove}
+                onTouchStart={onControlBarTouchStart}
                 onTouchEnd={onContainerMouseLeave}
             />
             <Indicator

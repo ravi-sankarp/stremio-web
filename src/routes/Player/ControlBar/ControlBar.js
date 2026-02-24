@@ -40,6 +40,7 @@ const ControlBar = ({
     onToggleSideDrawer,
     onToggleOptionsMenu,
     onToggleStatisticsMenu,
+    onTouchStart,
     onTouchEnd,
     ...props
 }) => {
@@ -105,7 +106,7 @@ const ControlBar = ({
         };
     }, []);
     return (
-        <div {...props} onTouchStart={props.onMouseOver} onTouchMove={props.onMouseMove} onTouchEnd={onTouchEnd} className={classnames(className, styles['control-bar-container'])}>
+        <div {...props} onTouchStart={onTouchStart} onTouchMove={props.onMouseMove} onTouchEnd={onTouchEnd} className={classnames(className, styles['control-bar-container'])}>
             <SeekBar
                 className={styles['seek-bar']}
                 time={time}
@@ -215,6 +216,7 @@ ControlBar.propTypes = {
     onToggleStatisticsMenu: PropTypes.func,
     onMouseOver: PropTypes.func,
     onMouseMove: PropTypes.func,
+    onTouchStart: PropTypes.func,
     onTouchEnd: PropTypes.func,
 };
 
